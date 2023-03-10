@@ -17,6 +17,7 @@ public class CarController : MonoBehaviour
     [SerializeField] private Transform RLMesh;
     [SerializeField] private Transform RRMesh;
 
+    [SerializeField] private CarIsGrounded carIsGrounded;
 
     [SerializeField] private Rigidbody rb;
     public float acceleration = 500f;
@@ -34,8 +35,8 @@ public class CarController : MonoBehaviour
     private void Update()
     {
 
-       
-        if (rb.velocity.magnitude <0.1f)
+
+        if (rb.velocity.magnitude < 0.1f)
         {
             rb.velocity = Vector3.zero;
         }
@@ -50,12 +51,14 @@ public class CarController : MonoBehaviour
         {
             currentBreakingForce = 0f;
         }
+        if (carIsGrounded.GroundCheck()) { 
         currentAcceleration = acceleration * -vert;
+        }
+        
 
         FL.motorTorque = currentAcceleration;
         FR.motorTorque = currentAcceleration;
-        RL.motorTorque = currentAcceleration;
-        RR.motorTorque = currentAcceleration;
+        
 
         FL.brakeTorque = currentBreakingForce;
         FR.brakeTorque = currentBreakingForce;
@@ -65,11 +68,18 @@ public class CarController : MonoBehaviour
         currentTurnAngle = maxTurnAngle * Input.GetAxis("Horizontal");
         FL.steerAngle = currentTurnAngle;
         FR.steerAngle = currentTurnAngle;
+        
+       
+
 
         //updateWheel(FL, FLMesh);
         //updateWheel(FR, FRMesh);
         //updateWheel(RL, RLMesh);
         //updateWheel(RR, RRMesh);
+    }
+    private void FixedUpdate()
+    {
+        rb.AddForce(Physics.gravity, ForceMode.Acceleration);
     }
     public float getCurrentAcceleration()
     {
@@ -92,6 +102,26 @@ public class CarController : MonoBehaviour
         col.GetWorldPose(out position, out rotation);
         trans.position = position;
         trans.rotation = rotation;
+    }
+    public WheelCollider getFL()
+    {
+        return FL;
+
+    }
+    public WheelCollider getRR()
+    {
+        return RR;
+
+    }
+    public WheelCollider getFR()
+    {
+        return FR;
+
+    }
+    public WheelCollider getRL()
+    {
+        return RL;
+
     }
     public Rigidbody getCar()
     {

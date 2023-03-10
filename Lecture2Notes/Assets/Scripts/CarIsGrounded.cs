@@ -11,22 +11,23 @@ public class CarIsGrounded : MonoBehaviour
     {
         
     }
-   /* public bool GroundCheck()
+    public bool GroundCheck()
     {
-        Rigidbody rb = carController.getCar();
-        *//*if (rb.SweepTest(transform.position, Vector3.down, distanceToGround +0.1f))
+        if (carController.getFL().isGrounded || carController.getFR().isGrounded || carController.getRL().isGrounded || carController.getRR().isGrounded)
         {
-            Debug.Log("Grounded");
             return true;
         }
         else
         {
-            Debug.Log("Not Grounded");
             return false;
-        }*//*
-    }*/
+        }
+    }
     private void FixedUpdate()
     {
+       
+       
+     
+       
     }
     void Update()
     {
