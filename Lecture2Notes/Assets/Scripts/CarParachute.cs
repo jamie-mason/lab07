@@ -2,12 +2,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-struct Rotation {
+struct Rotation
+{
     private readonly float rotationX;
     private readonly float rotationY;
     private readonly float rotationZ;
-  
- 
+
+
     public Rotation(float rotationX, float rotationY, float rotationZ)
     {
         this.rotationX = rotationX;
@@ -32,15 +33,23 @@ public class CarParachute : MonoBehaviour
     public GameObject car;
     Rigidbody rb;
     public GameObject parachute;
-    [SerializeField] float RotationSpeed = 10f;
+    [SerializeField] float MaxAirRollSpeed = 10f;
     [SerializeField] float RevertSpeed = 10f;
-    [SerializeField] float AirRollSpeed = 10f;
+    [SerializeField] float AirRollMagnitude = 10f;
+    [SerializeField] float ParachuteForwardSpeed = 10f;
+    [SerializeField] float decel = 2f;
+    [SerializeField] float paraDelay = 1f;
     float rotationX = 0f;
     float rotationY = 0f;
     float rotationZ = 0f;
-   
+    float avx = 0;
+    float avy = 0;
+    float avz = 0;
+    float t = 0;
+    [SerializeField] float cVal = 0f;
+
+
     [SerializeField] float dragForce = 0f;
-    float old;
 
 
     public cameraSwivel cam;
@@ -49,8 +58,8 @@ public class CarParachute : MonoBehaviour
     private void Start()
     {
         rb = car.GetComponent<Rigidbody>();
-        old = car.GetComponent<Rigidbody>().velocity.y;
-
+        rotationY = car.transform.localEulerAngles.y;
+        rb.drag = 0.01f;
     }
     private void Update()
     {
@@ -59,12 +68,14 @@ public class CarParachute : MonoBehaviour
         {
             if (!parachuteIsActive())
             {
-               
-                openParachute();
-                
+                rb.drag = 0f;
+                rb.constraints = RigidbodyConstraints.FreezeRotation;
+                StartCoroutine(parachuteDelay());
+                rb.constraints = RigidbodyConstraints.None;
             }
             else
             {
+                rb.drag = 0.01f;
                 closeParachute();
             }
         }
@@ -75,139 +86,243 @@ public class CarParachute : MonoBehaviour
     }
     private void FixedUpdate()
     {
-        if (!carIsGrounded.GroundCheck())
+        if (parachuteIsActive())
         {
-            if (parachuteIsActive())
-            {
-                parachuteSteering();
-                parachuteSpeed();
-            }
-            else
-            {
-                airRotation();
-            }
+            parachuteSteering();
+            parachuteSpeed();
         }
-       
+        else
+        {
+            airRotation();
+        }
+
 
 
 
 
 
     }
+    IEnumerator parachuteDelay()
+    {
+        yield return new WaitForSeconds(1f);
+        openParachute();
+    }
     void parachuteSpeed()
     {
-        Rigidbody rb = car.GetComponent<Rigidbody>();
 
         float terminalVelocity;
         if (dragForce != 0f)
         {
-            terminalVelocity = -Physics.gravity.y / dragForce;
+            //terminal velocity if drag force is not equal to 0. and if the dragforce value is negative it sets teh value positive.
+            terminalVelocity = -Physics.gravity.y / Mathf.Abs(dragForce);
         }
         else
         {
-            terminalVelocity = 0f * (Mathf.Abs(Physics.gravity.y) + Physics.gravity.y * Time.fixedDeltaTime);
+            //terminal velocity if drag force is equal to 0 because one cannot divide by 0.
+            terminalVelocity = 0f;
 
         }
-        rb.AddForce(Vector3.down * (rb.velocity.y + terminalVelocity * Mathf.Exp(-Time.fixedDeltaTime) - terminalVelocity),ForceMode.Acceleration);
-       
-        Debug.Log(terminalVelocity);
+        //lift force when parachute is active
+        float parMag = (rb.velocity.y + terminalVelocity * Mathf.Exp(-Time.fixedDeltaTime) - terminalVelocity);
+        rb.AddForce(Vector3.down * parMag ,ForceMode.Acceleration);
+        rb.velocity = new Vector3((ParachuteForwardSpeed + ParachuteForwardSpeed * car.transform.localRotation.x ) * -rb.transform.forward.x, rb.velocity.y, (ParachuteForwardSpeed + ParachuteForwardSpeed * car.transform.localRotation.x) * -rb.transform.forward.z);
+
     }
     void parachuteSteering()
     {
-        var rot = car.transform.localEulerAngles;       
-        if (rotationX >= -12f && rotationX <= 12f)
-        {
-            if (Input.GetKey(KeyCode.I))
-            {
-                rotationX -= RotationSpeed * Time.deltaTime;
-
-            }
-            else if (Input.GetKey(KeyCode.K))
-            {
-                rotationX += RotationSpeed * Time.deltaTime;
-            }
-            else
-            {
-                rotationX = revertRotation(rotationX);
-            }
-            rotationX = Mathf.Clamp(rotationX, -12f, 12f);
-        }
-        else
-        {
-            rotationX = revertRotation(rotationX);
-
-        }
-        if (rotationX >= -12f && rotationX <= 12f)
-        {
-            if (Input.GetKey(KeyCode.J))
-            {
-                setVelocityDirection();
-                rotationZ -= RotationSpeed * Time.deltaTime;
-                rotationY -= RotationSpeed * Time.deltaTime;
-
-            }
-            else if (Input.GetKey(KeyCode.L))
-            {
-                setVelocityDirection();
-                rotationZ += RotationSpeed * Time.deltaTime;
-                rotationY += RotationSpeed * Time.deltaTime;
-            }
-            else
-            {
-                rotationZ = revertRotation(rotationZ);
-            }
-            rotationZ = Mathf.Clamp(rotationZ, -12f, 12f);
-        }
-        else
-        {
-            rotationZ = revertRotation(rotationZ);
-
-        }
-
-        Rotation rotation = new Rotation(rotationX, rotationY, rotationZ);
-        rot.x = rotation.getRotationX();
-        rot.y = rotation.getRotationY();
-        rot.z = rotation.getRotationZ();
-        car.transform.localEulerAngles = rot;
+        
+    
 
     }
-    void setVelocityDirection()
+    void revertRotation()
     {
-        float mag = Mathf.Sqrt(Mathf.Pow(rb.velocity.x, 2f) + Mathf.Pow(rb.velocity.x, 2f));
-        Vector3 direction = new Vector3(mag * Mathf.Sin(car.transform.localRotation.y) * Mathf.Sin(car.transform.localRotation.y), 0f, mag * Mathf.Cos(car.transform.localRotation.y) * Mathf.Sin(car.transform.localRotation.y));
-        rb.AddForce(direction, ForceMode.Force);
+
+    }
+    
+    bool checkKeyDown(KeyCode s)
+    {
+        if (Input.GetKeyDown(s) == true)
+            return true;
+        else 
+            return false;
+    }
+    bool checkKeyUp(KeyCode s)
+    {
+        if (Input.GetKeyUp(s) == true)
+            return true;
+        else
+            return false;
     }
     void airRotation()
     {
-        Vector3 rot = car.transform.localEulerAngles;
         if (Input.GetKey(KeyCode.I))
         {
-            rotationX -= AirRollSpeed * Time.deltaTime;
-            rot.x = rotationX;
-            car.transform.localEulerAngles = rot;
+            if (rb.angularVelocity.magnitude < MaxAirRollSpeed)
+            {
+                rb.AddRelativeTorque(Vector3.left * AirRollMagnitude * Time.deltaTime, ForceMode.Acceleration);
+                
+            }
+            t = 0;
+            avx = rb.angularVelocity.x;
+            avy = rb.angularVelocity.y;
+            avz = rb.angularVelocity.z;
+        }
+        if (Input.GetKey(KeyCode.K))
+        {
+            if (rb.angularVelocity.magnitude < MaxAirRollSpeed)
+            {
+                rb.AddRelativeTorque(Vector3.right * AirRollMagnitude * Time.deltaTime, ForceMode.Acceleration);
+            }
+            t = 0;
+            avx = rb.angularVelocity.x;
+            avy = rb.angularVelocity.y;
+            avz = rb.angularVelocity.z;
+        }
+
+        if (Input.GetKey(KeyCode.J) && Input.GetKey(KeyCode.Space))
+        {
+
+            if (rb.angularVelocity.magnitude < MaxAirRollSpeed)
+            {
+                rb.AddRelativeTorque(Vector3.up * AirRollMagnitude * Time.deltaTime, ForceMode.Acceleration);
+            }
+            t = 0;
+            avx = rb.angularVelocity.x;
+            avy = rb.angularVelocity.y;
+            avz = rb.angularVelocity.z;
+        }
+        else if (Input.GetKey(KeyCode.L) && Input.GetKey(KeyCode.Space))
+        {
+
+            if (rb.angularVelocity.magnitude < MaxAirRollSpeed)
+            {
+                rb.AddRelativeTorque(Vector3.down * AirRollMagnitude * Time.deltaTime, ForceMode.Acceleration);
+            }
+            t = 0;
+            avx = rb.angularVelocity.x;
+            avy = rb.angularVelocity.y;
+            avz = rb.angularVelocity.z;
+
 
         }
         else if (Input.GetKey(KeyCode.J))
         {
-            rotationX += AirRollSpeed * Time.deltaTime;
-            rot.x = rotationX;
-            car.transform.localEulerAngles = rot;
-        }
-        if (Input.GetKey(KeyCode.J))
-        {
-            rotationZ -= AirRollSpeed * Time.deltaTime;
-            rot.z = rotationZ;
-            car.transform.localEulerAngles = rot;
+            if (rb.angularVelocity.magnitude < MaxAirRollSpeed)
+            {
+                rb.AddRelativeTorque(Vector3.back * AirRollMagnitude * Time.deltaTime, ForceMode.Acceleration);
+            }
+            t = 0;
+            avx = rb.angularVelocity.x;
+            avy = rb.angularVelocity.y;
+            avz = rb.angularVelocity.z;
 
         }
         else if (Input.GetKey(KeyCode.L))
         {
-            rotationZ += AirRollSpeed * Time.deltaTime;
-            rot.z = rotationZ;
-            car.transform.localEulerAngles = rot;
+
+            if (rb.angularVelocity.magnitude < MaxAirRollSpeed)
+            {
+                rb.AddRelativeTorque(Vector3.forward * AirRollMagnitude * Time.deltaTime, ForceMode.Acceleration);
+            }
+            t = 0;
+            avx = rb.angularVelocity.x;
+            avy = rb.angularVelocity.y;
+            avz = rb.angularVelocity.z;
+
         }
         
+        if(!Input.GetKey(KeyCode.L) && !Input.GetKey(KeyCode.J) && !Input.GetKey(KeyCode.K) && !Input.GetKey(KeyCode.I))
+        {
+            //x angularVelocity deceleration
+            if (rb.angularVelocity.x > 0f)
+            {
+                float val = Mathf.Pow(decel, -(t - (Mathf.Log(Mathf.Abs(avx) + cVal) / Mathf.Log(decel)))) - cVal;
+                if (val > 0f)
+                {
+                    rb.angularVelocity = new Vector3(val, rb.angularVelocity.y, rb.angularVelocity.z);
+                }
+                else
+                {
+                    rb.angularVelocity = new Vector3(0f, rb.angularVelocity.y, rb.angularVelocity.z);
+                }
+
+            }
+            else if(rb.angularVelocity.x < 0f)
+            {
+                float val = -Mathf.Pow(decel, -(t - (Mathf.Log(Mathf.Abs(avx) + cVal) / Mathf.Log(decel)))) + cVal;
+                if (val < 0f)
+                {
+                    rb.angularVelocity = new Vector3(val, rb.angularVelocity.y, rb.angularVelocity.z);
+                }
+                else
+                {
+                    rb.angularVelocity = new Vector3(0f, rb.angularVelocity.y, rb.angularVelocity.z);
+                }
+            }
+
+            //z angularVelocity deceleration
+            if (rb.angularVelocity.z > 0f)
+            {
+                float val = Mathf.Pow(decel, -(t - (Mathf.Log(Mathf.Abs(avz) + cVal) / Mathf.Log(decel)))) - cVal;
+                if (val > 0f)
+                {
+                    rb.angularVelocity = new Vector3(rb.angularVelocity.x, rb.angularVelocity.y, val);
+                }
+                else
+                {
+                    rb.angularVelocity = new Vector3(rb.angularVelocity.x, rb.angularVelocity.y, 0f);
+                }
+
+            }
+            else if (rb.angularVelocity.z < 0f)
+            {
+                float val = -Mathf.Pow(decel, -(t - (Mathf.Log(Mathf.Abs(avz) + cVal) / Mathf.Log(decel)))) + cVal;
+                if (val < 0f)
+                {
+                    rb.angularVelocity = new Vector3(rb.angularVelocity.x, rb.angularVelocity.y, val);
+                }
+                else
+                {
+                    rb.angularVelocity = new Vector3(rb.angularVelocity.x, rb.angularVelocity.y, 0f);
+                }
+            }
+            // revert y axis
+            if (rb.angularVelocity.y > 0f)
+            {
+                float val = Mathf.Pow(decel, -(t - (Mathf.Log(Mathf.Abs(avy) + cVal) / Mathf.Log(decel)))) - cVal;
+                if (val > 0f)
+                {
+                    rb.angularVelocity = new Vector3(rb.angularVelocity.x, val, rb.angularVelocity.z);
+                }
+                else
+                {
+                    rb.angularVelocity = new Vector3(rb.angularVelocity.x, 0f , rb.angularVelocity.z);
+                }
+
+            }
+            else if (rb.angularVelocity.y < 0f)
+            {
+                float val = -Mathf.Pow(decel, -(t - (Mathf.Log(Mathf.Abs(avy) + cVal) / Mathf.Log(decel)))) + cVal;
+                if (val > 0f)
+                {
+                    rb.angularVelocity = new Vector3(rb.angularVelocity.x, val, rb.angularVelocity.z);
+                }
+                else
+                {
+                    rb.angularVelocity = new Vector3(rb.angularVelocity.x, 0f, rb.angularVelocity.z);
+                }
+            }
+
+            t += Time.fixedDeltaTime;
+
+
+
+        }
        
+    }
+    void revertRotation(Vector3 angVel)
+    {
+        
     }
 
     float revertRotationY(float rotation)
@@ -216,38 +331,7 @@ public class CarParachute : MonoBehaviour
 
         return rotation;
     }
-    float revertRotation(float rotation)
-    {
-        if (rotation > 0f)
-        {
-            if (rotation - RevertSpeed * Time.fixedDeltaTime < 0f)
-            {
-                rotation -= (rotation % RevertSpeed) * RevertSpeed * Time.fixedDeltaTime;
-            }
-            else
-            {
-                rotation -= RevertSpeed * Time.fixedDeltaTime;
-            }
-        }
-        else if (rotation < 0f)
-        {
-            if (rotation + RevertSpeed * Time.fixedDeltaTime > 0f)
-            {
-                rotation -= (rotation % RevertSpeed) * RevertSpeed * Time.fixedDeltaTime;
-            }
-            else
-            {
-                rotation += RevertSpeed * Time.fixedDeltaTime;
-            }
-        }
-        return rotation;
 
-    }
-    float velocityFactor()
-    {
-        // Get and return the magnitude of the plane
-        return car.GetComponent<Rigidbody>().velocity.magnitude;
-    }
     private void openParachute()
     {
         parachute.SetActive(true);
@@ -256,16 +340,7 @@ public class CarParachute : MonoBehaviour
 
 
     }
-    private void lowerSpeed()
-    {
-        
-        
-
-    }
-    private void parachuteControls()
-    {
-      
-    }
+  
     private void closeParachute()
     {
         parachute.SetActive(false);

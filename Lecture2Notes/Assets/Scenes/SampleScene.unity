@@ -580,7 +580,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 652056670}
   m_LocalRotation: {x: 0.3304284, y: -0.62515366, z: 0.3304284, w: 0.62515366}
-  m_LocalPosition: {x: 887.71423, y: 199.39015, z: -18.000015}
+  m_LocalPosition: {x: 887.71423, y: 193.52986, z: -30.470016}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -911,7 +911,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   m_LocalRotation: {x: 0.23405685, y: -0.66724616, z: 0.23405685, w: 0.66724616}
-  m_LocalPosition: {x: 885.0814, y: 193.52737, z: -18}
+  m_LocalPosition: {x: 885.0814, y: 187.66705, z: -30.47}
   m_LocalScale: {x: 0.7500012, y: 1, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1850,7 +1850,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2067688305}
   m_LocalRotation: {x: 0.23405685, y: -0.66724616, z: 0.23405685, w: 0.66724616}
-  m_LocalPosition: {x: 885.0814, y: 193.52737, z: -18}
+  m_LocalPosition: {x: 885.0814, y: 187.66705, z: -30.47}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -4033,7 +4033,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3337544931532256223}
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 882.0814, y: 191.12738, z: -18}
+  m_LocalPosition: {x: 882.0814, y: 185.26706, z: -30.47}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -4554,12 +4554,12 @@ Rigidbody:
   m_GameObject: {fileID: 3337544931532256223}
   serializedVersion: 2
   m_Mass: 1000
-  m_Drag: 0.1
-  m_AngularDrag: 0.05
+  m_Drag: 0.5
+  m_AngularDrag: 0
   m_UseGravity: 0
   m_IsKinematic: 0
   m_Interpolate: 1
-  m_Constraints: 0
+  m_Constraints: 12
   m_CollisionDetection: 0
 --- !u!114 &3337544931532256225
 MonoBehaviour:
@@ -4614,9 +4614,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   car: {fileID: 3337544931532256223}
   parachute: {fileID: 1689296066}
-  RotationSpeed: 20
+  MaxAirRollSpeed: 9.81
   RevertSpeed: 36
-  AirRollSpeed: 20
+  AirRollMagnitude: 10
+  ParachuteForwardSpeed: 10
+  decel: 5
+  paraDelay: 0.02
+  cVal: 0
   dragForce: 2
   cam: {fileID: 3337544931532256228}
   carIsGrounded: {fileID: 3337544931532256229}
